@@ -12,7 +12,7 @@ app.post('/', async (req, res) => {
   function isMentioned(msg) {
     let mentioned = false;
     if (msg.entities !== undefined) { // contains entities like mentions or commands
-      mentioned = msg.text.includes('@emojipastatest1_bot'); // TODO: remove hardcode
+      mentioned = msg.text.includes(process.env.BOT_USERNAME); 
     }
     return mentioned;
   }
@@ -29,8 +29,8 @@ app.post('/', async (req, res) => {
 
       if (replyingToMsg === undefined) {
         replyId = currMsg.message_id;
-        replyText = currMsg.text.replace('@emojipastatest1_bot', ''); // TODO: remove hardcode
-        replyText += " 🤣" // to test
+        replyText = currMsg.text.replace(process.env.BOT_USERNAME, ''); 
+        replyText = replyText === '' ? "👁👄👁" : replyText + " 🤣";
       } else {
         replyId = replyingToMsg.message_id;
         replyText = replyingToMsg.text + " 🤣";
