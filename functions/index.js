@@ -22,10 +22,25 @@ app.post('/', async (req, res) => {
 
       if (emojiMappings.hasOwnProperty(word)) {
         let wordEmojis = emojiMappings[word]
-
         // pick no. of emojis to insert between 0 and 3
-        // TODO: if have time do weighted random num closer to 0
-        let numToInsert = Math.floor(Math.random() * 4);
+        // Weighted random num closer to 0
+        let rng = Math.random();
+        let numToInsert = 0;
+        switch (true) {
+          case (rng >= 0 && rng < 0.3):
+            numToInsert = 0;
+            break;
+          case (rng >= 0.3 && rng < 0.7):
+            numToInsert = 1;
+            break;
+          case (rng >= 0.7 && rng < 0.9):
+            numToInsert = 2;
+            break;
+          default:
+            numToInsert = 3;
+            break;
+        }
+        // let numToInsert = Math.floor(Math.random() * 4);
 
         // pick emojis randomly from the mapping
         while (numToInsert--) {
