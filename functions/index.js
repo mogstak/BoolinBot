@@ -5,11 +5,13 @@ const app = express();
 require('dotenv').config();
 var emojiMappings = require('./emoji-mappings.json');
 var request = require('request');
+const { json } = require('express');
 
 // our single entry point for every message
 app.post('/', async (req, res) => {
   // function to check if the bot has been mentioned
   function isMentioned(msg) {
+    console.log(msg);
     let mentioned = false;
     if (msg.entities !== undefined) { // contains entities like mentions or commands
       mentioned = msg.text.includes(process.env.BOT_USERNAME); // set as @<bot username> in .env
@@ -64,36 +66,49 @@ app.post('/', async (req, res) => {
   let curUserId = req.body.message.chat.id;
   let currMsg = req.body.message; 
   let replyingToMsg = req.body.message.reply_to_message; // if the message is replying to another message
+  let jsonBody, replyText;
+  let requestUrl = 'https://api.telegram.org/bot' + process.env.BOT_TOKEN + '/sendMessage';
   
   if (curUserId) {
-    if (isMentioned(currMsg)) {
-      var replyId, replyText;
-
-      if (replyingToMsg === undefined) {
-        replyId = currMsg.message_id;
-        replyText = currMsg.text.replace(process.env.BOT_USERNAME, ''); 
-        replyText = replyText === '' ? "👁👄👁" : emojify(replyText);
-      } else {
-        replyId = replyingToMsg.message_id;
-        replyText = emojify(replyingToMsg.text);
-      }
-
-      let requestUrl = 'https://api.telegram.org/bot' + process.env.BOT_TOKEN + '/sendMessage';
-
-      replyToMessage(curUserId, replyText, (callback) => {
+    if (curUserId > 0) {
+      replyText = emojify(currMsg.text);
+      jsonBody = {
+        chat_id: curUserId,
+        text: replyText
+      };
+      replyToMessage(curUserId, replyText, jsonBody, (callback) => {
         return res.status(200).send();
       });
-
-      function replyToMessage(curUserId, msg, callback) {
+    } else {
+      if (isMentioned(currMsg)) {
+        console.log("IS MENTIONED");
+        var replyId;
+        if (replyingToMsg === undefined) {
+          replyId = currMsg.message_id;
+          replyText = currMsg.text.replace(process.env.BOT_USERNAME, ''); 
+          replyText = replyText === '' ? "👁👄👁" : emojify(replyText);
+        } else {
+          replyId = replyingToMsg.message_id;
+          replyText = emojify(replyingToMsg.text);
+        }
+        jsonBody = {
+          chat_id: curUserId,
+          text: replyText,
+          reply_to_message_id: replyId // the message that the bot will reply to
+        };
+        replyToMessage(curUserId, replyText, jsonBody, (callback) => {
+          return res.status(200).send();
+        });
+      } else {
+        return res.status(200).send(); // TODO: find a better way to prevent timeout ?
+      }
+    }
+      function replyToMessage(curUserId, msg, jsonBody, callback) {
         request.post({
           url: requestUrl,
           'Content-Type': "application/json;charset=utf-8",
           json: true,
-          body: {
-            chat_id: curUserId,
-            text: msg,
-            reply_to_message_id: replyId // the message that the bot will reply to
-          }
+          body: jsonBody
         }, function (error, result, body) {
             if (error) {
                 console.log(error);
@@ -105,9 +120,6 @@ app.post('/', async (req, res) => {
             }
         });
       } //end of callbackFunction
-    } else { // ignore messages without mentions
-      return res.status(200).send(); // TODO: find a better way to prevent timeout ?
-    }
   } else {
     return res.status(400).send({ status: 'not a telegram message' });
   }
