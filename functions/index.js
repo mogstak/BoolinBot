@@ -5,21 +5,27 @@ const app = express();
 require('dotenv').config();
 var emojiMappings = require('./emoji-mappings.json');
 var request = require('request');
-//var emoji = require("@jukben/emoji-search");
 
 // our single entry point for every message
 app.post('/', async (req, res) => {
-  let curUserId = req.body.message.chat.id;
-  let chatContent = req.body.message.text;
-  function main(txt) {
-    spliced_txt = txt.split(" ");
-    var stringArray = new Array();
-    var mssg = "";
-    for (var i = 0; i < spliced_txt.length; i++) {
-      let word = spliced_txt[i];
+  // function to check if the bot has been mentioned
+  function isMentioned(msg) {
+    let mentioned = false;
+    if (msg.entities !== undefined) { // contains entities like mentions or commands
+      mentioned = msg.text.includes(process.env.BOT_USERNAME); // set as @<bot username> in .env
+    }
+    return mentioned;
+  }
+
+  // function to convert the text into emojipasta
+  function emojify(txt) {
+    let splicedText = txt.split(" ");
+    let stringArray = new Array();
+    let returnMsg = "";
+    for (var i = 0; i < splicedText.length; i++) {
+      let word = splicedText[i];
       stringArray.push(word);
       word = word.toLowerCase()
-
       if (emojiMappings.hasOwnProperty(word)) {
         let wordEmojis = emojiMappings[word]
         // pick no. of emojis to insert between 0 and 3
@@ -40,7 +46,6 @@ app.post('/', async (req, res) => {
             numToInsert = 3;
             break;
         }
-        // let numToInsert = Math.floor(Math.random() * 4);
 
         // pick emojis randomly from the mapping
         while (numToInsert--) {
@@ -51,26 +56,43 @@ app.post('/', async (req, res) => {
       stringArray.push(" ");
     }
     for (var i = 0; i < stringArray.length; i++) {
-      mssg += stringArray[i];
+      returnMsg += stringArray[i];
     }
-      return mssg;
+      return returnMsg;
   }
+
+  let curUserId = req.body.message.chat.id;
+  let currMsg = req.body.message; 
+  let replyingToMsg = req.body.message.reply_to_message; // if the message is replying to another message
+  
   if (curUserId) {
+    if (isMentioned(currMsg)) {
+      var replyId, replyText;
+
+      if (replyingToMsg === undefined) {
+        replyId = currMsg.message_id;
+        replyText = currMsg.text.replace(process.env.BOT_USERNAME, ''); 
+        replyText = replyText === '' ? "👁👄👁" : emojify(replyText);
+      } else {
+        replyId = replyingToMsg.message_id;
+        replyText = emojify(replyingToMsg.text);
+      }
+
       let requestUrl = 'https://api.telegram.org/bot' + process.env.BOT_TOKEN + '/sendMessage';
 
-      sendMessage(curUserId, chatContent, (callback) => {
+      replyToMessage(curUserId, replyText, (callback) => {
         return res.status(200).send();
       });
 
-    function sendMessage(curUserId, chatContent, callback) {
-        const return_message = main(chatContent);
+      function replyToMessage(curUserId, msg, callback) {
         request.post({
           url: requestUrl,
           'Content-Type': "application/json;charset=utf-8",
           json: true,
           body: {
             chat_id: curUserId,
-            text: return_message
+            text: msg,
+            reply_to_message_id: replyId // the message that the bot will reply to
           }
         }, function (error, result, body) {
             if (error) {
@@ -83,6 +105,9 @@ app.post('/', async (req, res) => {
             }
         });
       } //end of callbackFunction
+    } else { // ignore messages without mentions
+      return res.status(200).send(); // TODO: find a better way to prevent timeout ?
+    }
   } else {
     return res.status(400).send({ status: 'not a telegram message' });
   }
