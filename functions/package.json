@@ -11,7 +11,7 @@
     "start": "node --inspect=5000 node_modules/@google-cloud/functions-framework --target router --port 5000"
   },
   "engines": {
-    "node": "8"
+    "node": "10"
   },
   "dependencies": {
     "@google-cloud/functions-framework": "^1.2.1",
