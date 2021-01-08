@@ -3,8 +3,9 @@ const cors = require('cors')({origin: true});
 const express = require('express');
 const app = express();
 require('dotenv').config();
+var emojiMappings = require('./emoji-mappings.json');
 var request = require('request');
-var emoji = require("@jukben/emoji-search");
+//var emoji = require("@jukben/emoji-search");
 
 // our single entry point for every message
 app.post('/', async (req, res) => {
@@ -15,19 +16,27 @@ app.post('/', async (req, res) => {
     var stringArray = new Array();
     var mssg = "";
     for (var i = 0; i < spliced_txt.length; i++) {
-      stringArray.push(spliced_txt[i]);
-      const search_result = emoji.default(spliced_txt[i]);
-      if (search_result.length != 0) {
-        for (var j = 0; j < search_result.length; j++) {
-          stringArray.push(search_result[j].char);
+      let word = spliced_txt[i];
+      stringArray.push(word);
+      word = word.toLowerCase()
+
+      if (emojiMappings.hasOwnProperty(word)) {
+        let wordEmojis = emojiMappings[word]
+
+        // pick no. of emojis to insert between 0 and 3
+        // TODO: if have time do weighted random num closer to 0
+        let numToInsert = Math.floor(Math.random() * 4);
+
+        // pick emojis randomly from the mapping
+        while (numToInsert--) {
+          let i = Math.floor(Math.random() * wordEmojis.length)
+          stringArray.push(wordEmojis[i])
         }
-      }
-      else {
-        stringArray.push(" ");
-      }
+      } 
+      stringArray.push(" ");
     }
     for (var i = 0; i < stringArray.length; i++) {
-      mssg = mssg + stringArray[i];
+      mssg += stringArray[i];
     }
       return mssg;
   }
