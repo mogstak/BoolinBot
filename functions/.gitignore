@@ -39,6 +39,7 @@ local.properties
 # Firebase
 firebase-debug.log
 .firebase/
+.firebaserc
 
 # node.js
 node_modules/

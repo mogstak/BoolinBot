@@ -26,6 +26,7 @@
     "start": "*.js"
   },
   "devDependencies": {
+    "@jukben/emoji-search": "^2.0.1",
     "firebase-functions-test": "^0.1.6",
     "npm-watch": "^0.6.0"
   },
