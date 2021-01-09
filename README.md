@@ -1,8 +1,6 @@
-## Telegram Emojipasta Bot
+# Telegram Emojipasta Bot
 
----
-
-A Telegram bot to automatically insert emojis between words. When the bot is tagged in any message, it will convert that message into an emojipasta. Live at @emoji_pasta_bot
+A Telegram bot to automatically insert emojis between words. When the bot is tagged in any message, it will convert that message into an emojipasta. Live at **[@emoji_pasta_bot](https://t.me/emoji_pasta_bot)** 
 
 Credits to [Kevinpgalligan](https://github.com/Kevinpgalligan/EmojipastaBot) for the emoji mappings. 
 
