@@ -11,7 +11,6 @@ const { json } = require('express');
 app.post('/', async (req, res) => {
   // function to check if the bot has been mentioned
   function isMentioned(msg) {
-    console.log(msg);
     let mentioned = false;
     if (msg.entities !== undefined) { // contains entities like mentions or commands
       mentioned = msg.text.includes(process.env.BOT_USERNAME); // set as @<bot username> in .env
@@ -63,65 +62,73 @@ app.post('/', async (req, res) => {
       return returnMsg;
   }
 
-  let curUserId = req.body.message.chat.id;
-  let currMsg = req.body.message; 
-  let replyingToMsg = req.body.message.reply_to_message; // if the message is replying to another message
-  let jsonBody, replyText;
-  let requestUrl = 'https://api.telegram.org/bot' + process.env.BOT_TOKEN + '/sendMessage';
-  
-  if (curUserId) {
-    if (curUserId > 0) {
-      replyText = emojify(currMsg.text);
-      jsonBody = {
-        chat_id: curUserId,
-        text: replyText
-      };
-      replyToMessage(curUserId, replyText, jsonBody, (callback) => {
-        return res.status(200).send();
-      });
+  try {
+    let curUserId = req.body.message.chat.id;
+    let currMsg = req.body.message; 
+    let replyingToMsg = req.body.message.reply_to_message; // if the message is replying to another message
+    let jsonBody, replyText;
+    let requestUrl = 'https://api.telegram.org/bot' + process.env.BOT_TOKEN + '/sendMessage';
+
+    if (currMsg.text === undefined) {
+      return res.status(200).send();
     } else {
-      if (isMentioned(currMsg)) {
-        console.log("IS MENTIONED");
-        var replyId;
-        if (replyingToMsg === undefined) {
-          replyId = currMsg.message_id;
-          replyText = currMsg.text.replace(process.env.BOT_USERNAME, ''); 
-          replyText = replyText === '' ? "👁👄👁" : emojify(replyText);
+      if (curUserId) {
+        if (curUserId > 0) {
+          replyText = emojify(currMsg.text);
+          jsonBody = {
+            chat_id: curUserId,
+            text: replyText
+          };
+          replyToMessage(curUserId, replyText, jsonBody, (callback) => {
+            return res.status(200).send();
+          });
         } else {
-          replyId = replyingToMsg.message_id;
-          replyText = emojify(replyingToMsg.text);
+          if (isMentioned(currMsg)) {
+            var replyId;
+            if (replyingToMsg === undefined) {
+              replyId = currMsg.message_id;
+              replyText = currMsg.text.replace(process.env.BOT_USERNAME, ''); 
+              replyText = replyText === '' ? "👁👄👁" : emojify(replyText);
+            } else {
+              replyId = replyingToMsg.message_id;
+              replyText = emojify(replyingToMsg.text);
+            }
+            jsonBody = {
+              chat_id: curUserId,
+              text: replyText,
+              reply_to_message_id: replyId // the message that the bot will reply to
+            };
+            replyToMessage(curUserId, replyText, jsonBody, (callback) => {
+              return res.status(200).send();
+            });
+          } else {
+            return res.status(200).send(); // TODO: find a better way to prevent timeout ?
+          }
         }
-        jsonBody = {
-          chat_id: curUserId,
-          text: replyText,
-          reply_to_message_id: replyId // the message that the bot will reply to
-        };
-        replyToMessage(curUserId, replyText, jsonBody, (callback) => {
-          return res.status(200).send();
-        });
+        function replyToMessage(curUserId, msg, jsonBody, callback) {
+          request.post({
+            url: requestUrl,
+            'Content-Type': "application/json;charset=utf-8",
+            json: true,
+            body: jsonBody
+          }, function (error, result, body) {
+              if (error) {
+                  console.log(error);
+              } else if (result.statusCode === 500 || result.statusCode === 400) {
+                  console.log('error');
+                  callback(true, body);
+              } else {
+                callback(false, body);
+              }
+          });
+        } //end of callbackFunction
       } else {
-        return res.status(200).send(); // TODO: find a better way to prevent timeout ?
+        return res.status(400).send({ status: 'not a telegram message' });
       }
     }
-      function replyToMessage(curUserId, msg, jsonBody, callback) {
-        request.post({
-          url: requestUrl,
-          'Content-Type': "application/json;charset=utf-8",
-          json: true,
-          body: jsonBody
-        }, function (error, result, body) {
-            if (error) {
-                console.log(error);
-            } else if (result.statusCode === 500 || result.statusCode === 400) {
-                console.log('error');
-                callback(true, body);
-            } else {
-              callback(false, body);
-            }
-        });
-      } //end of callbackFunction
-  } else {
-    return res.status(400).send({ status: 'not a telegram message' });
+  } catch (err) {
+    console.log(err);
+    return res.status(200).send();
   }
 });
 
